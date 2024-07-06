@@ -1,0 +1,561 @@
+local attackCount = 0
+local canAttack = true
+
+local attackRadius = 15
+
+local function CreateDamageHitbox()
+    hitbox = Instance.new("Part")
+    hitbox.Name = "AttackHitbox"
+    hitbox.Size = Vector3.new(5, 5, 5)
+    hitbox.Anchored = true
+    hitbox.CanCollide = false
+    hitbox.Transparency = 1
+    hitbox.Color = Color3.fromRGB(255, 0, 0)
+    hitbox.Parent = game.Workspace
+    return hitbox
+end
+
+local function Attack()
+    if canAttack then
+        attackCount = attackCount + 1
+   local Anim = Instance.new("Animation")
+Anim.AnimationId = "rbxassetid://94790076"
+local k = game:GetService("Players").LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
+k:Play()
+k:AdjustSpeed(1)
+        hitbox = CreateDamageHitbox()
+        hitbox.Position = game.Players.LocalPlayer.Character.Head.Position + game.Players.LocalPlayer.Character.Humanoid.MoveDirection * 3
+        
+        hitbox.Touched:Connect(function(hit)
+            local humanoid = hit.Parent:FindFirstChildWhichIsA("Humanoid")
+            if humanoid then
+                if hit.Parent ~= game.Players.LocalPlayer.Character then
+                    humanoid:TakeDamage(2)
+                    Spooky = Instance.new("Sound", game.Workspace)
+Spooky.Name = "Spooky"
+Spooky.SoundId = "rbxassetid://8595980577"
+Spooky.Volume = 1
+Spooky.PlaybackSpeed = 1
+Spooky.Looped = false
+Spooky:Play()
+                end
+            end
+        end)
+        
+        wait(0.1)
+        hitbox:Destroy()
+        
+        canAttack = false
+        wait(1)
+        canAttack = true
+    end
+end
+
+local tool = Instance.new("Tool")
+tool.Name = "Fight"
+tool.Grip = CFrame.new(0, -1, 0)
+tool.GripForward = Vector3.new(0, 0, 1)
+tool.GripRight = Vector3.new(1, 0, 0)
+tool.GripUp = Vector3.new(0, 1, 0)
+tool.RequiresHandle = false
+tool.Parent = game.Players.LocalPlayer.Backpack
+
+tool.Activated:Connect(Attack)
+
+local tool = Instance.new("Tool")
+tool.Name = "Rush"
+tool.RequiresHandle = false
+
+local function DoRush()
+    local distance = 70
+    local player = game.Players.LocalPlayer.Character
+    local humanoidRootPart = player:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        local newCFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, -distance)
+        
+        local tweenInfo = TweenInfo.new(
+            1,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out,
+            0,
+            false,
+            0
+        )
+        local tween = game.TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = newCFrame})
+        
+        tween:Play()
+
+        local pushBox = Instance.new("Part")
+        pushBox.Name = "PushBox"
+        pushBox.Size = Vector3.new(5, 5, 5)
+        pushBox.Transparency = 1
+        pushBox.Anchored = true
+        pushBox.CanCollide = false
+        pushBox.Parent = player
+        pushBox.CFrame = humanoidRootPart.CFrame
+
+        local connection
+        connection = game:GetService("RunService").Heartbeat:Connect(function()
+            if player and player.Parent then
+                pushBox.CFrame = humanoidRootPart.CFrame
+            else
+                connection:Disconnect()
+                pushBox:Destroy()
+            end
+        end)
+
+        pushBox.Touched:Connect(function(hit)
+            if hit.Parent:FindFirstChild("Humanoid") and hit.Parent ~= player then
+                local humanoid = hit.Parent:FindFirstChild("Humanoid")
+                humanoid:TakeDamage(4)
+                local pushForce = Vector3.new(0, 0, -20)
+                hit.Parent:ApplyAngularImpulse(Vector3.new(0, 0, -10))
+            end
+        end)
+
+        tween.Completed:Wait()
+        connection:Disconnect()
+        pushBox:Destroy()
+    end
+end
+
+tool.Activated:Connect(DoRush)
+tool.Parent = game.Players.LocalPlayer.Backpack
+
+
+local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local LaserDamage = 0.1
+local LaserRange = 10000
+local LaserSize = 20
+
+local function fireLaser()
+    local chargeSound = SoundService:FindFirstChild("LaserChargeSound")
+    if not chargeSound then
+        chargeSound = Instance.new("Sound")
+        chargeSound.SoundId = "rbxassetid://6652938230"
+        chargeSound.Name = "LaserChargeSound"
+        chargeSound.TimePosition = 13
+        chargeSound.Parent = SoundService
+    end
+    chargeSound:Play()
+
+    laser = Instance.new("Part")
+    laser.Name = "Laser"
+    laser.Size = Vector3.new(0, 0, 0)
+    laser.Color = Color3.fromRGB(255, 255, 255)
+    laser.Material = Enum.Material.Neon
+    laser.Anchored = true
+    laser.CanCollide = false
+    laser.Parent = workspace
+
+    local targetSize = Vector3.new(LaserSize, LaserSize, LaserRange)
+    local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(laser, tweenInfo, {Size = targetSize})
+    tween:Play()
+
+    local cframe = LocalPlayer.Character.Head.CFrame
+    laser.CFrame = CFrame.new(cframe.Position, cframe.Position + cframe.LookVector * LaserRange)
+
+    local startTime = tick()
+    while laser and (tick() - startTime) < 6.5 do
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {laser}
+
+        local raycastResult = workspace:Raycast(laser.Position, laser.CFrame.LookVector * LaserRange, raycastParams)
+        if raycastResult then
+            local hitPart = raycastResult.Instance
+            local humanoid = hitPart.Parent:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Parent ~= LocalPlayer.Character then
+                humanoid:TakeDamage(LaserDamage)
+                humanoid.WalkSpeed = 5
+            end
+        end
+
+        laser.CFrame = CFrame.new(laser.Position, laser.Position + laser.CFrame.LookVector * LaserRange)
+        RunService.Stepped:Wait()
+    end
+
+    if laser then
+        laser:Destroy()
+    end
+
+    local shootSound = SoundService:FindFirstChild("LaserShootSound")
+    if not shootSound then
+        shootSound = Instance.new("Sound")
+        shootSound.SoundId = "rbxassetid://6652938235"
+        shootSound.Name = "LaserShootSound"
+        shootSound.TimePosition = 13
+        shootSound.Parent = SoundService
+    end
+    shootSound:Play()
+end
+
+local function disablePlayerMovement()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+         
+    end
+end
+
+local function enablePlayerMovement()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+        
+    end
+end
+
+local tool = Instance.new("Tool")
+tool.Name = "Laser Beam"
+tool.RequiresHandle = false
+tool.Parent = LocalPlayer.Backpack
+local cooldown = 10
+
+local isCooldown = false
+tool.Activated:Connect(function()
+if isCooldown then return end
+    isCooldown = true
+    disablePlayerMovement()
+    fireLaser()
+    enablePlayerMovement()
+    wait(cooldown)
+    isCooldown = false
+end)
+
+local tool = Instance.new("Tool")
+tool.Name = "Ultimate"
+tool.RequiresHandle = false
+
+tool.Activated:Connect(function()
+tool:Destroy()
+local player = game.Players.LocalPlayer.Character
+player.Humanoid.MaxHealth = 2000
+
+local function createBeam()
+    local beam = Instance.new("Part")
+    beam.Name = "Beam"
+    beam.Shape = Enum.PartType.Cylinder
+    beam.Size = Vector3.new(0.5, 10, 0.5)
+    beam.Color = Color3.fromRGB(255, 255, 255)
+    beam.Anchored = true
+    beam.CanCollide = false
+    beam.Transparency = 0.5
+    beam.Material = Enum.Material.Neon
+    beam.AssemblyAngularVelocity = Vector3.new(1e6, 1e6, 1e6)
+    beam.Parent = player
+
+    return beam
+end
+
+local beams = {}
+for i = 1, 20 do
+    local beam = createBeam()
+    beam.Position = player.HumanoidRootPart.Position + Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
+    table.insert(beams, beam)
+end
+
+local function moveBeams()
+    for _, beam in pairs(beams) do
+        local targetPosition = player.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+        game:GetService("TweenService"):Create(beam, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = targetPosition}):Play()
+    end
+end
+
+local function tools()
+
+local attackCount = 0
+local canAttack = true
+
+local attackRadius = 15
+local forceStrength = 40
+
+local function CreateDamageHitbox()
+    hitbox = Instance.new("Part")
+    hitbox.Name = "AttackHitbox"
+    hitbox.Size = Vector3.new(5, 5, 5)
+    hitbox.Anchored = true
+    hitbox.CanCollide = false
+    hitbox.Transparency = 1
+    hitbox.Color = Color3.fromRGB(255, 0, 0)
+    hitbox.Parent = game.Workspace
+    return hitbox
+end
+
+local function Attack()
+    if canAttack then
+        attackCount = attackCount + 1
+        local Anim = Instance.new("Animation")
+        Anim.AnimationId = "rbxassetid://28458752"
+        local k = game:GetService("Players").LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
+        k:Play()
+        k:AdjustSpeed(1)
+        hitbox = CreateDamageHitbox()
+        hitbox.Position = game.Players.LocalPlayer.Character.Head.Position + game.Players.LocalPlayer.Character.Humanoid.MoveDirection * 3
+        
+        hitbox.Touched:Connect(function(hit)
+            local humanoid = hit.Parent:FindFirstChildWhichIsA("Humanoid")
+            if humanoid then
+                if hit.Parent ~= game.Players.LocalPlayer.Character then
+                    humanoid.Health = humanoid.Health - 50
+                    local direction = (hit.Parent.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Unit
+                    humanoid.Parent:TranslateBy(direction * forceStrength)
+                    Spooky = Instance.new("Sound", game.Workspace)
+                    Spooky.Name = "Spooky"
+                    Spooky.SoundId = "rbxassetid://8595980577"
+                    Spooky.Volume = 1
+                    Spooky.PlaybackSpeed = 1
+                    Spooky.Looped = false
+                    Spooky:Play()
+                end
+            end
+        end)
+        
+        wait(0.1)
+        hitbox:Destroy()
+        
+        canAttack = false
+        wait(2)
+        canAttack = true
+    end
+end
+
+local tool = Instance.new("Tool")
+tool.Name = "Ultra kick"
+tool.Grip = CFrame.new(0, -1, 0)
+tool.GripForward = Vector3.new(0, 0, 1)
+tool.GripRight = Vector3.new(1, 0, 0)
+tool.GripUp = Vector3.new(0, 1, 0)
+tool.RequiresHandle = false
+tool.Parent = game.Players.LocalPlayer.Backpack
+
+tool.Activated:Connect(Attack)
+
+local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local LaserDamage = math.huge
+local LaserRange = 10000
+local LaserSize = 100
+
+local function fireLaser()
+    local chargeSound = SoundService:FindFirstChild("LaserChargeSound")
+    if not chargeSound then
+        chargeSound = Instance.new("Sound")
+        chargeSound.SoundId = "rbxassetid://6652938230"
+        chargeSound.Name = "LaserChargeSound"
+        chargeSound.TimePosition = 13
+        chargeSound.Parent = SoundService
+    end
+    chargeSound:Play()
+
+    local laser = Instance.new("Part")
+    laser.Name = "Laser"
+    laser.Size = Vector3.new(10, 10, 100)
+    laser.Color = Color3.fromRGB(255, 255, 255)
+    laser.Material = Enum.Material.Neon
+    laser.Anchored = true
+    laser.CanCollide = false
+    laser.Parent = workspace
+
+    local targetSize = Vector3.new(LaserSize, LaserSize, LaserRange)
+    local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(laser, tweenInfo, {Size = targetSize})
+    tween:Play()
+
+    local cframe = LocalPlayer.Character.Head.CFrame
+    laser.CFrame = CFrame.new(cframe.Position, cframe.Position + cframe.LookVector * LaserRange)
+
+    local startTime = tick()
+    while laser and (tick() - startTime) < 6.5 do
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {laser}
+
+        local raycastResult = workspace:Raycast(laser.Position, laser.CFrame.LookVector * LaserRange, raycastParams)
+        if raycastResult then
+            local hitPart = raycastResult.Instance
+            local humanoid = hitPart.Parent:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Parent ~= LocalPlayer.Character then
+                humanoid:TakeDamage(LaserDamage)
+            end
+        end
+
+        laser.CFrame = CFrame.new(laser.Position, laser.Position + laser.CFrame.LookVector * LaserRange)
+        RunService.Stepped:Wait()
+    end
+
+    if laser then
+        laser:Destroy()
+    end
+
+    local shootSound = SoundService:FindFirstChild("LaserShootSound")
+    if not shootSound then
+        shootSound = Instance.new("Sound")
+        shootSound.SoundId = "rbxassetid://6652938235"
+        shootSound.Name = "LaserShootSound"
+        shootSound.TimePosition = 13
+        shootSound.Parent = SoundService
+    end
+    shootSound:Play()
+end
+
+local function disablePlayerMovement()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+    game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = true
+    local Anim = Instance.new("Animation")
+Anim.AnimationId = "rbxassetid://97884040"
+local k = game:GetService("Players").LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
+k:Play()
+k:AdjustSpeed(1)
+         chargeSound = Instance.new("Sound")
+        chargeSound.SoundId = "rbxassetid://6652938230"
+        chargeSound.Name = "LaserChargeSound"
+        chargeSound.TimePosition = 13
+        chargeSound.Parent = SoundService
+        chargeSound:Play()
+    end
+end
+
+local function enablePlayerMovement()
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+        game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+        local Humanoid = game.Players.LocalPlayer.Character.Humanoid
+local ActiveTracks = Humanoid:GetPlayingAnimationTracks()
+for _,v in pairs(ActiveTracks) do
+     v:Stop()
+end
+    end
+end
+
+local tool = Instance.new("Tool")
+tool.Name = "Energy Release"
+tool.RequiresHandle = false
+tool.Parent = LocalPlayer.Backpack
+local cooldown = 10
+
+local isCooldown = false
+tool.Activated:Connect(function()
+if isCooldown then return end
+    isCooldown = true
+    disablePlayerMovement()
+task.wait(4.5)
+    fireLaser()
+    enablePlayerMovement()
+    wait(cooldown)
+    isCooldown = false
+end)
+
+tool.Parent = game.Players.LocalPlayer.Backpack
+
+local tool = Instance.new("Tool")
+tool.Name = "Domain Expansion"
+tool.RequiresHandle = false
+local cooldown = 25
+
+local isCooldown = false
+tool.Activated:Connect(function()
+if isCooldown then return end
+    isCooldown = true
+    local Anim = Instance.new("Animation")
+Anim.AnimationId = "rbxassetid://97884040"
+local k = game:GetService("Players").LocalPlayer.Character.Humanoid:LoadAnimation(Anim)
+k:Play()
+k:AdjustSpeed(1)
+Spooky = Instance.new("Sound", workspace)
+Spooky.Name = "Domain Activation"
+Spooky.SoundId = "rbxassetid://6590147536"
+Spooky.Volume = 3
+Spooky.PlaybackSpeed = 0.85
+Spooky.Looped = false
+Spooky:Play()
+task.wait(4)
+
+local neonPart = Instance.new("Part")
+neonPart.Name = "NeonPart"
+neonPart.Size = Vector3.new(2, 2, 10)
+neonPart.Color = Color3.fromRGB(255, 0, 0)
+neonPart.Anchored = true
+neonPart.CanCollide = false
+
+local sparkles = Instance.new("Sparkles", neonPart)
+sparkles.Name = "Sparkles"
+sparkles.Color = Color3.fromRGB(255, 0, 0)
+sparkles.Enabled = false
+
+local function dealDamage(humanoid)
+    if humanoid.Parent ~= game.Players.LocalPlayer.Character then
+        humanoid.Health = humanoid.Health - humanoid.MaxHealth / 100
+    Spooky = Instance.new("Sound", humanoid)
+Spooky.Name = "Domain Hit"
+Spooky.SoundId = "rbxassetid://6881026094"
+Spooky.Volume = 0.05
+Spooky.PlaybackSpeed = 1
+Spooky.Looped = false
+Spooky:Play()
+        local humanoidRootPart = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            humanoidRootPart.Anchored = true
+        end
+    end
+end
+
+local function activateBeam()
+    sparkles.Enabled = true
+    local startTime = os.time()
+    while os.time() - startTime < 10 do
+        for _, humanoid in pairs(workspace:GetDescendants()) do
+            if humanoid:IsA("Humanoid") then
+                dealDamage(humanoid)
+            end
+        end
+        wait()
+    end
+
+    for _, humanoid in pairs(workspace:GetDescendants()) do
+        if humanoid:IsA("Humanoid") then
+            local humanoidRootPart = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                humanoidRootPart.Anchored = false
+            end
+        end
+    end
+
+    sparkles.Enabled = false
+end
+
+activateBeam()
+
+neonPart.Parent = workspace
+local Humanoid = game.Players.LocalPlayer.Character.Humanoid
+local ActiveTracks = Humanoid:GetPlayingAnimationTracks()
+for _,v in pairs(ActiveTracks) do
+     v:Stop()
+end
+game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+wait(cooldown)
+    isCooldown = false
+end)
+
+tool.Parent = game.Players.LocalPlayer.Backpack
+end
+
+coroutine.wrap(tools)()
+while true do
+    moveBeams()
+    wait()
+  end
+end)
+
+tool.Parent = game.Players.LocalPlayer.Backpack
